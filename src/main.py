@@ -106,9 +106,9 @@ def add_people():
         return "Hay datos incompletos, favor completarlos"
     else:
         #return request_body["name"]
-        people = people(name=request_body["name"], age=request_body["age"], eye_color=request_body["eye_color"], birthday=request_body["birthday"], skin_color=request_body["skin_color"], height=request_body["height"], gender=request_body["gender"])
+        people = People(name=request_body["name"], age=request_body["age"], eye_color=request_body["eye_color"], birthday=request_body["birthday"], skin_color=request_body["skin_color"], height=request_body["height"], gender=request_body["gender"])
         
-        bd.session.add(people)
+        db.session.add(people)
         db.session.commit()
         return "posteo exitoso"
 
