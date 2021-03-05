@@ -10,6 +10,13 @@ from utils import APIException, generate_sitemap
 from admin import setup_admin
 from models import db, User, People, Planets, Favorites
 import json 
+
+
+## Nos permite hacer las encripciones de contraseñas
+from werkzeug.security import generate_password_hash, check_password_hash
+
+## Nos permite manejar tokens por authentication (usuarios) 
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 #from models import Person
 
 app = Flask(__name__)
@@ -20,6 +27,7 @@ MIGRATE = Migrate(app, db)
 db.init_app(app)
 CORS(app)
 setup_admin(app)
+jwt = JWTManager(app)
 
 # Handle/serialize errors like a JSON object
 @app.errorhandler(APIException)
@@ -128,9 +136,74 @@ def add_planets():
         db.session.commit()
         return "posteo exitoso"
 
-       
+####### R E G I S T E R******************************************************************
 
-# this only runs if `$ python src/main.py` is executed
+@app.route('/register', methods=["POST"])
+def register():
+    if request.method == 'POST':
+        email = request.json.get("email", None)
+        password = request.json.get("password", None)
+
+        if not email:
+            return jsonify({"msg": "email is required"}), 400
+        if not password:
+            return jsonify({"msg": "Password is required"}), 400
+
+        user = User.query.filter_by(email=email).first()
+        if user:
+            return jsonify({"msg": "Username  already exists"}), 400
+
+        user = User()
+        user.email = email
+        hashed_password = generate_password_hash(password)
+        print(password, hashed_password)
+
+        user.password = hashed_password
+
+        db.session.add(user)
+        db.session.commit()
+
+        return jsonify({"success": "Thanks. your register was successfully", "status": "true"}), 200
+
+
+@app.route('/login', methods=['POST'])
+def login():
+    if request.method == 'POST':
+        email = request.json.get("email", None)
+        password = request.json.get("password", None)
+
+        if not email:
+            return jsonify({"msg": "Username is required"}), 400
+        if not password:
+            return jsonify({"msg": "Password is required"}), 400
+
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return jsonify({"msg": "Username/Password are incorrect"}), 401
+
+        if not check_password_hash(user.password, password):
+            return jsonify({"msg": "Username/Password are incorrect"}), 401
+
+        # crear el token
+        expiracion = datetime.timedelta(days=3)
+        access_token = create_access_token(identity=user.email, expires_delta=expiracion)
+
+        data = {
+            "user": user.serialize(),
+            "token": access_token,
+            "expires": expiracion.total_seconds()*1000
+        }
+
+        return jsonify(data), 200
+
+@app.route('/profile', methods=['GET'])
+@jwt_required()
+def profile():
+    if request.method == 'GET':
+        token = get_jwt_identity()
+        return jsonify({"success": "Acceso a espacio privado", "usuario": token}), 200
+
+# this only runs if `$ python src/main.py` is executed********************************************
 if __name__ == '__main__':
     PORT = int(os.environ.get('PORT', 3000))
     app.run(host='0.0.0.0', port=PORT, debug=False)
