@@ -70,6 +70,38 @@ def get_user_id(id_get):
     return jsonify(usuario_serializado), 200
 
 
+#**********FAVORITOS***********************************************************
+
+@app.route('/get_favorites', methods=['GET'])
+def get_fav():
+
+    # get all the favorites
+    query = Favorites.query.all()
+
+    # map the results and your list of people  inside of the all_people variable
+    results = list(map(lambda x: x.serialize(), query))
+
+    return jsonify(results), 200
+
+
+@app.route('/add_favorite', methods=['POST'])
+def add_fav():
+
+    # recibir info del request
+    request_body = request.get_json()
+    print(request_body)
+
+    fav = Favorites(name=request_body["name"], uid=request_body['uid'])
+    db.session.add(fav)
+    db.session.commit()
+
+    return jsonify("All good"), 200
+
+
+@app.route('/update_favorite/<int:fid>', methods=['PUT'])
+def update_fav(fid):
+
+
 
 ####### GET PEOPLE*********************************************************************************
 @app.route('/people', methods=['GET'])
